@@ -3,3 +3,8 @@
 
 # Output files that shouldn't be stored
 CO2 conductances and effective porosity/effective_porosity.csv
+Greenhouse gas exchange and TDL/gm_calculations_outliers_excluded.csv
+Greenhouse gas exchange and TDL/gm_calculations_outliers_included.csv
+Greenhouse gas exchange and TDL/gm_stats_by_event_outliers_excluded.csv
+Greenhouse gas exchange and TDL/gm_stats_by_rep_outliers_excluded.csv
+Greenhouse gas exchange and TDL/tdl_data_processed.csv

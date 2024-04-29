@@ -17,8 +17,8 @@ Methods S2 in the Supplemenal Information.
   effective porosity from the contents of `leaf_properties.csv`.
 
 - `CGR3 greenhouse CO2 conductances and effective porosity.csv`: A table of CO2
-  conductances and effective porosities that was produced by running the
-  `effective_porosity.R` script.
+  conductances and effective porosities that was originally produced by running
+  the `effective_porosity.R` script.
 
 ## Running the script
 
