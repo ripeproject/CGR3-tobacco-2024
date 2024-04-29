@@ -9,7 +9,14 @@ were used to create Figures S2 and S3, and Table S2.
 ## Files
 
 - `CGR3_greenhouse_stomatal_density_and_cell_wall_analysis.xlsx`: cell wall composition, leaf starch and 
-sugar content and stomatal density dataset.
+sugar content and stomatal density datasets from greenhouse grown tobacco plants.
 
+
+## Data dictionary
+
+The columns in `CGR3_greenhouse_stomatal_density_and_cell_wall_analysis.xlsx` are defined as follows:
+
+ - `AIR`: Alcohol insoluble residue
+   Units: `mg`
 
 
