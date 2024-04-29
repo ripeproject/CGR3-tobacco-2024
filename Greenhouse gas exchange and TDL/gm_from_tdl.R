@@ -7,6 +7,14 @@
 library(PhotoGEA)
 library(lattice)
 
+# Check to make sure we have the correct version of PhotoGEA
+if (packageVersion('PhotoGEA') != '0.10.0') {
+    stop(
+        'The `process_variable_j.R` script requires PhotoGEA version 0.10.0. ',
+        'See README.md for installation instructions.'
+    )
+}
+
 # Define Rd
 RESPIRATION_RATE <- 2.1
 
