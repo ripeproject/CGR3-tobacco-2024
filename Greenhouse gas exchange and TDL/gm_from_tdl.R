@@ -44,6 +44,9 @@ TDL_COLUMNS_TO_EXTRACT <- c(
     TDL_13C_COLUMN_NAME
 )
 
+# Names of important columns in the Licor data
+LICOR_TIMESTAMP_COLUMN_NAME <- 'time'
+
 # Choose gas lines to smooth
 TDL_VALVES_TO_SMOOTH <- c(2, 20, 21, 23, 26)
 
