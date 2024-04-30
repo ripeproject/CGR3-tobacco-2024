@@ -3,6 +3,10 @@
 
 # Output files that shouldn't be stored
 CO2 conductances and effective porosity/effective_porosity.csv
+Field gas exchange/vj_aci_parameters.csv
+Field gas exchange/vj_all_samples.csv
+Field gas exchange/vj_all_samples_one_point.csv
+Field gas exchange/vj_for_jmp.csv
 Greenhouse gas exchange and TDL/gm_calculations_outliers_excluded.csv
 Greenhouse gas exchange and TDL/gm_calculations_outliers_included.csv
 Greenhouse gas exchange and TDL/gm_stats_by_event_outliers_excluded.csv

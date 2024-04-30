@@ -53,3 +53,5 @@ The scripts in this directory require two R packages: `lattice` and `PhotoGEA`
    the contents of `Summary CGR3 greenhouse mesophyll conductance TDL.xlsx` are
    taken from a subset of the columns included in the
    `gm_stats_by_rep_outliers_excluded.csv` file.
+
+*WARNING:* This script will automatically clear your workspace before it runs.
