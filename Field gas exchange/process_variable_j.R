@@ -142,8 +142,7 @@ c3_aci_results <- consolidate(by(
 ))
 
 # Plot the C3 A-Cc fits (including limiting rates)
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   A + Ac + Aj + Ap + A_fit ~ Cc | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -173,8 +172,7 @@ print(xyplot(
 ))
 
 # Plot the C3 A-Ci fits (including limiting rates)
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   A + Ac + Aj + Ap + A_fit ~ Ci | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -204,8 +202,7 @@ print(xyplot(
 ))
 
 # Plot the C3 A-Cc fits
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   A + A_fit ~ Cc | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -217,8 +214,7 @@ print(xyplot(
 ))
 
 # Plot the C3 J_F-Cc fits
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   ETR + J_F ~ Cc | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -230,8 +226,7 @@ print(xyplot(
 ))
 
 # Plot the C3 gmc-Cc fits
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   gmc ~ Cc | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -243,8 +238,7 @@ print(xyplot(
 ))
 
 # Plot the C3 gmc-Ci fits
-dev.new()
-print(xyplot(
+pdf_print(xyplot(
   gmc ~ Ci | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
@@ -306,11 +300,9 @@ plot_param <- list(
 )
 
 invisible(lapply(plot_param, function(x) {
-  dev.new()
-  print(do.call(bwplot_wrapper, x))
+  pdf_print(do.call(bwplot_wrapper, x))
 
-  dev.new()
-  print(do.call(barchart_with_errorbars, x))
+  pdf_print(do.call(barchart_with_errorbars, x))
 }))
 
 # Make average response curve plots

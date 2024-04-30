@@ -465,9 +465,7 @@ box_bar_plot_param <- list(
 
 # Make all the box and bar charts
 invisible(lapply(box_bar_plot_param, function(x) {
-  dev.new()
-  print(do.call(bwplot_wrapper, x))
+  pdf_print(do.call(bwplot_wrapper, x))
 
-  dev.new()
-  print(do.call(barchart_with_errorbars, x))
+  pdf_print(do.call(barchart_with_errorbars, x))
 }))
