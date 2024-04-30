@@ -7,7 +7,7 @@ analysis and produce figures for the manuscript titled "Greater mesophyll
 conductance and leaf photosynthesis in the field through modified cell wall
 porosity and thickness via AtCGR3 expression in tobacco", published in
 _Plant Biotechnology Journal_
-(DOI: [10.1111/pbi.14364](https://doi.org/10.1111/pbi.14364)).
+(DOI: [10.1111/pbi.14364](https://doi.org/10.1111/pbi.14364).
 
 ## Scripts
 
@@ -20,6 +20,10 @@ installation:
   - R version 4.3.2 (2023-10-31 ucrt)
   - Platform: x86_64-w64-mingw32
   - Windows 10 Enterprise version 10.0.19045 Build 19045
+
+Some of these scripts use version `0.10.0` of the
+[PhotoGEA R package](https://eloch216.github.io/PhotoGEA/) for processing and
+analyzing gas exchange data.
 
 Additional instructions for running the scripts can be found in the `README.md`
 files in those directories.
