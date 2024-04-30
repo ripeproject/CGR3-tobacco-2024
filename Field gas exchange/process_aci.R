@@ -10,7 +10,7 @@ library(lattice)
 # Check to make sure we have the correct version of PhotoGEA
 if (packageVersion('PhotoGEA') != '0.10.0') {
     stop(
-        'The `process_variable_j.R` script requires PhotoGEA version 0.10.0. ',
+        'The `process_aci.R` script requires PhotoGEA version 0.10.0. ',
         'See README.md for installation instructions.'
     )
 }
@@ -26,17 +26,23 @@ PHIPS2_COLUMN_NAME <- 'PhiPS2'
 
 # Describe a few key features of the data
 NUM_OBS_IN_SEQ <- 17
+MEASUREMENT_NUMBERS_TO_REMOVE <- c(9, 10)
 
-MEASUREMENT_NUMBERS_TO_REMOVE <- c(1, 6, 7, 8, 9, 15, 16, 17)
+# Decide whether to make certain plots
+MAKE_ANALYSIS_PLOTS <- TRUE
 
 # Choose a maximum value of Ci to use when fitting (ppm). Set to Inf to disable.
 MAX_CI <- Inf
 
 # Decide which point to use for box plots of A and other quantities
-POINT_FOR_BOX_PLOTS <- 10
+POINT_FOR_BOX_PLOTS <- 1
 
-# Specify which parameters should be fixed when fitting
-FIXED <- c(NA, NA, NA, NA, NA) # J, Rd, tau, TPU, Vcmax
+# Specify gm value to use here
+GM_VALUE <- Inf
+
+# Specify a value of Gamma_star to use (this will override the value calculated
+# from Arrhenius equations)
+GAMMA_STAR <- 50 # ppm
 
 ###
 ### TRANSLATION:
@@ -95,8 +101,11 @@ licor_data[, 'curve_identifier'] <-
 licor_data <- factorize_id_column(licor_data, EVENT_COLUMN_NAME)
 licor_data <- factorize_id_column(licor_data, 'curve_identifier')
 
-# Check data
-check_licor_data(licor_data, 'curve_identifier')
+# Remove certain events
+#licor_data <- remove_points(licor_data, list(event = c('15', '37')))
+
+# Make sure the data meets basic requirements
+check_licor_data(licor_data, 'curve_identifier', NUM_OBS_IN_SEQ)
 
 # Remove points with duplicated `CO2_r_sp` values and order by `Ci`
 licor_data <- organize_response_curve_data(
@@ -111,14 +120,29 @@ licor_data <- organize_response_curve_data(
 ### Extracting new pieces of information from the data
 ###
 
-# Calculate total pressure (required for fit_c3_variable_j)
+# Include gm values (required for apply_gm)
+licor_data <- set_variable(
+    licor_data,
+    'gmc',
+    "mol m^(-2) s^(-1) bar^(-1)",
+    'c3_co2_response_v2',
+    GM_VALUE
+)
+
+# Calculate total pressure (required for apply_gm)
 licor_data <- calculate_total_pressure(licor_data)
 
-# Calculate additional gas properties (required for calculate_c3_limitations_grassi)
+# Calculate additional gas properties
 licor_data <- calculate_gas_properties(licor_data)
+
+# Calculate Cc
+licor_data <- apply_gm(licor_data)
 
 # Calculate temperature-dependent values of C3 photosynthetic parameters
 licor_data <- calculate_arrhenius(licor_data, c3_arrhenius_sharkey)
+
+# Manually override Gamma_star
+licor_data[, 'Gamma_star'] <- GAMMA_STAR
 
 # Calculate intrinsic water-use efficiency
 licor_data <- calculate_wue(licor_data)
@@ -126,22 +150,18 @@ licor_data <- calculate_wue(licor_data)
 # Truncate the Ci range for fitting
 licor_data_for_fitting <- licor_data[licor_data[, 'Ci'] <= MAX_CI, , TRUE]
 
-# Set a seed number before fitting to make sure results are reproducible
-set.seed(1234)
-
-# Fit the C3 A-Ci curves using the variable J method
+# Fit the C3 A-Ci curves
 c3_aci_results <- consolidate(by(
   licor_data_for_fitting,                       # The `exdf` object containing the curves
   licor_data_for_fitting[, 'curve_identifier'], # A factor used to split `licor_data` into chunks
-  fit_c3_variable_j,                            # The function to apply to each chunk of `licor_data`
+  fit_c3_aci,                                   # The function to apply to each chunk of `licor_data`
   Ca_atmospheric = 420,                         # The atmospheric CO2 concentration
-  OPTIM_FUN = optimizer_nmkb(),                 # The optimization algorithm to use
-  fixed = FIXED,
-  cj_crossover_min = 20,                        # Wj must be > Wc when Cc < this value (ppm)
-  cj_crossover_max = 800                        # Wj must be < Wc when Cc > this value (ppm)
+  cj_crossover_min = 100,                       # Wj must be > Wc when Cc < this value (ppm)
+  cj_crossover_max = 800,                       # Wj must be < Wc when Cc > this value (ppm)
+  fixed = c(NA, NA, NA, NA)
 ))
 
-# Plot the C3 A-Cc fits (including limiting rates)
+# Plot the C3 A-Ci fits (including limiting rates)
 pdf_print(xyplot(
   A + Ac + Aj + Ap + A_fit ~ Cc | curve_identifier,
   data = c3_aci_results$fits$main_data,
@@ -149,12 +169,13 @@ pdf_print(xyplot(
   pch = 16,
   auto.key = list(space = 'right'),
   grid = TRUE,
-  xlab = paste0('Chloroplast CO2 concentration (', c3_aci_results$fits$units$Cc, ')'),
+  xlab = paste0('Chloroplast CO2 concentration (', c3_aci_results$fits$units$Ci, ')'),
   ylab = paste0('Net CO2 assimilation rate (', c3_aci_results$fits$units$A, ')'),
   par.settings = list(
     superpose.line = list(col = multi_curve_line_colors()),
     superpose.symbol = list(col = multi_curve_point_colors(), pch = 16)
   ),
+  ylim = c(-5, 55),
   curve_ids = c3_aci_results$fits[, 'curve_identifier'],
   panel = function(...) {
     panel.xyplot(...)
@@ -171,82 +192,16 @@ pdf_print(xyplot(
   }
 ))
 
-# Plot the C3 A-Ci fits (including limiting rates)
+# Plot the C3 A-Ci fits
 pdf_print(xyplot(
-  A + Ac + Aj + Ap + A_fit ~ Ci | curve_identifier,
-  data = c3_aci_results$fits$main_data,
-  type = 'b',
-  pch = 16,
-  auto.key = list(space = 'right'),
-  grid = TRUE,
-  xlab = paste0('Intercellular CO2 concentration (', c3_aci_results$fits$units$Ci, ')'),
-  ylab = paste0('Net CO2 assimilation rate (', c3_aci_results$fits$units$A, ')'),
-  par.settings = list(
-    superpose.line = list(col = multi_curve_line_colors()),
-    superpose.symbol = list(col = multi_curve_point_colors(), pch = 16)
-  ),
-  curve_ids = c3_aci_results$fits[, 'curve_identifier'],
-  panel = function(...) {
-    panel.xyplot(...)
-    args <- list(...)
-    curve_id <- args$curve_ids[args$subscripts][1]
-    fit_param <-
-      c3_aci_results$parameters[c3_aci_results$parameters[, 'curve_identifier'] == curve_id, ]
-    panel.points(
-      fit_param$operating_An_model ~ fit_param$operating_Ci,
-      type = 'p',
-      col = 'black',
-      pch = 1
-    )
-  }
-))
-
-# Plot the C3 A-Cc fits
-pdf_print(xyplot(
-  A + A_fit ~ Cc | curve_identifier,
+  A + A_fit ~ Ci | curve_identifier,
   data = c3_aci_results$fits$main_data,
   type = 'b',
   pch = 16,
   auto = TRUE,
   grid = TRUE,
-  xlab = paste0('Chloroplast CO2 concentration (', c3_aci_results$fits$units$Cc, ')'),
+  xlab = paste0('Intercellular CO2 concentration (', c3_aci_results$fits$units$Ci, ')'),
   ylab = paste0('Net CO2 assimilation rate (', c3_aci_results$fits$units$A, ')')
-))
-
-# Plot the C3 J_F-Cc fits
-pdf_print(xyplot(
-  ETR + J_F ~ Cc | curve_identifier,
-  data = c3_aci_results$fits$main_data,
-  type = 'b',
-  pch = 16,
-  auto = TRUE,
-  grid = TRUE,
-  xlab = paste0('Chloroplast CO2 concentration (', c3_aci_results$fits$units$Cc, ')'),
-  ylab = paste0('Electron transport rate (', c3_aci_results$fits$units$J_F, ')')
-))
-
-# Plot the C3 gmc-Cc fits
-pdf_print(xyplot(
-  gmc ~ Cc | curve_identifier,
-  data = c3_aci_results$fits$main_data,
-  type = 'b',
-  pch = 16,
-  auto = TRUE,
-  grid = TRUE,
-  xlab = paste0('Chloroplast CO2 concentration (', c3_aci_results$fits$units$Cc, ')'),
-  ylab = paste0('Mesophyll conductance (', c3_aci_results$fits$units$gmc, ')')
-))
-
-# Plot the C3 gmc-Ci fits
-pdf_print(xyplot(
-  gmc ~ Ci | curve_identifier,
-  data = c3_aci_results$fits$main_data,
-  type = 'b',
-  pch = 16,
-  auto = TRUE,
-  grid = TRUE,
-  xlab = paste0('Intercellular CO2 concentration (', c3_aci_results$fits$units$Ci, ')'),
-  ylab = paste0('Mesophyll conductance (', c3_aci_results$fits$units$gmc, ')')
 ))
 
 ###
@@ -254,50 +209,38 @@ pdf_print(xyplot(
 ### Using plots and statistics to help draw conclusions from the data
 ###
 
-print(paste('Number of rows before removing outliers:', nrow(c3_aci_results$parameters)))
-
-c3_aci_results$parameters <- exclude_outliers(
-    c3_aci_results$parameters,
-    'Vcmax_at_25',
-    c3_aci_results$parameters[, EVENT_COLUMN_NAME]
-)
-
-print(paste('Number of rows after removing outliers:', nrow(c3_aci_results$parameters)))
-
-c3_aci_results$fits <-
-    c3_aci_results$fits[c3_aci_results$fits[, 'curve_identifier'] %in% c3_aci_results$parameters[, 'curve_identifier'], , TRUE]
-
 # Create a few data frames that will be helpful for plots
+
 all_samples <- c3_aci_results$fits$main_data
 
 col_to_average_as <- c(
-  'A', 'iWUE', PHIPS2_COLUMN_NAME, 'ETR', 'Ci', 'Cc', 'gsw', 'gmc'
+  'A', 'iWUE', PHIPS2_COLUMN_NAME, 'ETR', 'Ci', 'Cc', 'gsw'
 )
 
 all_samples_one_point <- all_samples[all_samples$seq_num == POINT_FOR_BOX_PLOTS, ]
+
 aci_parameters <- c3_aci_results$parameters$main_data
 
 # Make box-whisker plots and bar charts
 
 boxplot_caption <- paste0(
-    'Quartiles for measurement point ',
+    "Quartiles for measurement point ",
     POINT_FOR_BOX_PLOTS,
-    '\n(where CO2 setpoint = ',
+    "\n(where CO2 setpoint = ",
     all_samples_one_point[, 'CO2_r_sp'][POINT_FOR_BOX_PLOTS],
-    ')'
+    ")"
 )
 
-fitting_caption <- 'Values obtained by fitting A vs. Ci using the Variable J method'
+fitting_caption <- "Values obtained by fitting A vs. Ci using the FvCB model"
 
 x_s <- all_samples_one_point[, EVENT_COLUMN_NAME]
 x_v <- aci_parameters[, EVENT_COLUMN_NAME]
-xl <- 'Genotype'
+xl <- "Genotype"
 
 plot_param <- list(
-  list(Y = all_samples_one_point[, 'gmc'],  X = x_s, xlab = xl, ylab = 'Mesophyll conductance (mol / m^2 / s / bar)', ylim = c(0, 0.25), main = boxplot_caption),
-  list(Y = all_samples_one_point[, 'gsw'],  X = x_s, xlab = xl, ylab = "Stomatal conductance to H2O (mol / m^2 / s)", ylim = c(0, 0.8),  main = boxplot_caption),
-  list(Y = aci_parameters[, 'Vcmax_at_25'], X = x_v, xlab = xl, ylab = 'Vcmax at 25 degrees C (micromol / m^2 / s)',  ylim = c(0, 450),  main = fitting_caption),
-  list(Y = aci_parameters[, 'tau'],         X = x_v, xlab = xl, ylab = 'tau (dimensionless)',                         ylim = c(0, 1),    main = fitting_caption)
+  list(Y = all_samples_one_point[, 'A'],    X = x_s, xlab = xl, ylab = "Net CO2 assimilation rate (micromol / m^2 / s)",          ylim = c(0, 35),  main = boxplot_caption),
+  list(Y = all_samples_one_point[, 'iWUE'], X = x_s, xlab = xl, ylab = "Intrinsic water use efficiency (micromol CO2 / mol H2O)", ylim = c(0, 100), main = boxplot_caption),
+  list(Y = aci_parameters[, 'Vcmax_at_25'], X = x_v, xlab = xl, ylab = "Apparent Vcmax at 25 degrees C (micromol / m^2 / s)",     ylim = c(0, 150), main = fitting_caption)
 )
 
 invisible(lapply(plot_param, function(x) {
@@ -308,39 +251,37 @@ invisible(lapply(plot_param, function(x) {
 
 # Make average response curve plots
 
-rc_caption <- 'Average response curves for each event'
+rc_caption <- "Average response curves for each event"
 
 x_ci <- all_samples[, 'Ci']
-x_cc <- all_samples[, 'Cc']
-x_s  <- all_samples[, 'seq_num']
-x_e  <- all_samples[, EVENT_COLUMN_NAME]
+x_s <- all_samples[, 'seq_num']
+x_e <- all_samples[, EVENT_COLUMN_NAME]
 
-ci_lim  <- c(0, 800)
-cc_lim  <- c(0, 200)
-a_lim   <- c(-10, 45)
-gmc_lim <- c(0, 0.25)
+ci_lim <- c(-50, 1500)
+a_lim <- c(-10, 55)
+gsw_lim <- c(0, 0.7)
 
-ci_lab  <- 'Intercellular [CO2] (ppm)'
-cc_lab  <- 'Chloroplast [CO2] (ppm)'
-a_lab   <- 'Net CO2 assimilation rate (micromol / m^2 / s)\n(error bars: standard error of the mean for same CO2 setpoint)'
-gmc_lab <- 'Mesophyll conductance (mol / m^2 / s / bar)\n(error bars: standard error of the mean for same CO2 setpoint)'
+ci_lab <- "Intercellular [CO2] (ppm)"
+a_lab <- "Net CO2 assimilation rate (micromol / m^2 / s)\n(error bars: standard error of the mean for same CO2 setpoint)"
+gsw_lab <- "Stomatal conductance to H2O (mol / m^2 / s)\n(error bars: standard error of the mean for same CO2 setpoint)"
 
 avg_plot_param <- list(
     list(all_samples[, 'A'],   x_ci, x_s, x_e, xlab = ci_lab, ylab = a_lab,   xlim = ci_lim, ylim = a_lim),
-    list(all_samples[, 'A'],   x_cc, x_s, x_e, xlab = cc_lab, ylab = a_lab,   xlim = cc_lim, ylim = a_lim),
-    list(all_samples[, 'gmc'], x_cc, x_s, x_e, xlab = cc_lab, ylab = gmc_lab, xlim = cc_lim, ylim = gmc_lim),
-    list(all_samples[, 'gmc'], x_ci, x_s, x_e, xlab = ci_lab, ylab = gmc_lab, xlim = ci_lim, ylim = gmc_lim)
+    list(all_samples[, 'gsw'], x_ci, x_s, x_e, xlab = ci_lab, ylab = gsw_lab, xlim = ci_lim, ylim = gsw_lim)
 )
 
 invisible(lapply(avg_plot_param, function(x) {
-    dev.new(width = 8, height = 6)
-    print(do.call(xyplot_avg_rc, c(x, list(
-        type = 'b',
-        pch = 20,
-        auto = TRUE,
-        grid = TRUE,
-        main = rc_caption
-    ))))
+    pdf_print(
+        do.call(xyplot_avg_rc, c(x, list(
+            type = 'b',
+            pch = 20,
+            auto = TRUE,
+            grid = TRUE,
+            main = rc_caption
+        ))),
+        width = 8,
+        height = 6
+    )
 }))
 
 # Save to CSV
@@ -350,10 +291,11 @@ tmp <- by(
   function(x) {
     tmp2 <- data.frame(
       event = x[1, EVENT_COLUMN_NAME],
-      plot = x[1, 'plot'],
       replicate = x[1, 'replicate'],
+      plot <- x[1, 'plot'],
       curve_identifier = x[1, 'curve_identifier']
     )
+
     for (cn in col_to_average_as) {
       tmp3 <- as.data.frame(t(data.frame(a = x[[cn]])))
       colnames(tmp3) <- paste0(cn, '_', x$seq_num)
@@ -365,23 +307,15 @@ tmp <- by(
 
 tmp <- do.call(rbind, tmp)
 
-write.csv(tmp,                   'vj_for_jmp.csv',               row.names = FALSE)
-write.csv(all_samples,           'vj_all_samples.csv',           row.names = FALSE)
-write.csv(all_samples_one_point, 'vj_all_samples_one_point.csv', row.names = FALSE)
-write.csv(aci_parameters,        'vj_aci_parameters.csv',        row.names = FALSE)
+write.csv(tmp,                   'for_jmp.csv',               row.names = FALSE)
+write.csv(all_samples,           "all_samples.csv",           row.names = FALSE)
+write.csv(all_samples_one_point, "all_samples_one_point.csv", row.names = FALSE)
+write.csv(aci_parameters,        "aci_parameters.csv",        row.names = FALSE)
 
 # Print average operating point information
 cat('\nAverage operating point Ci for each genotype:\n')
 print(tapply(
     c3_aci_results$parameters[, 'operating_Ci'],
-    c3_aci_results$parameters[, EVENT_COLUMN_NAME],
-    mean
-))
-cat('\n')
-
-cat('\nAverage operating point Cc for each genotype:\n')
-print(tapply(
-    c3_aci_results$parameters[, 'operating_Cc'],
     c3_aci_results$parameters[, EVENT_COLUMN_NAME],
     mean
 ))

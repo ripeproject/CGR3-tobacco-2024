@@ -3,6 +3,10 @@
 
 # Output files that shouldn't be stored
 CO2 conductances and effective porosity/effective_porosity.csv
+Field gas exchange/aci_parameters.csv
+Field gas exchange/all_samples.csv
+Field gas exchange/all_samples_one_point.csv
+Field gas exchange/for_jmp.csv
 Field gas exchange/vj_aci_parameters.csv
 Field gas exchange/vj_all_samples.csv
 Field gas exchange/vj_all_samples_one_point.csv

@@ -39,6 +39,8 @@ Methods S2 in the Supplemenal Information.
 Note: The `effective_porosity.R` script only uses commands from base R, so no
 packages are required to use it.
 
+*WARNING:* This script will automatically clear your workspace before it runs.
+
 ## Data dictionary
 
 ### Inputs
