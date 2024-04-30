@@ -22,7 +22,10 @@ Figure 3 and Table S2 (in the Supplemental Information).
 
 - `Summary CGR3 greenhouse mesophyll conductance TDL.xlsx`: A table of mesophyll
   conductance and other values that was originally produced by running the
-  `gm_from_tdl.R` script.
+  `gm_from_tdl.R` script. The output files from `gm_from_tdl.R` contain many
+  columns, while `Summary CGR3 greenhouse mesophyll conductance TDL.xlsx`
+  contains a smaller number of important columns that were actually used to
+  generate figures and tables in the manuscript.
 
 ## Running the script
 

@@ -27,10 +27,17 @@ Supplemental Information).
 
 - `CGR3 field gas exchange ACi fits.xlsx`: An Excel file that contains a table
   whose values were originally produced by running the `process_aci.R` script.
+  The output files from `process_aci.R` contain many columns, while
+  `CGR3 field gas exchange ACi fits.xlsx` contains a smaller number of important
+  columns that were actually used to generate figures and tables in the
+  manuscript.
 
 - `CGR3 field gas exchange gm variable J.xlsx`: An Excel file that contains a
   table whose values were originally produced by running the
-  `process_variable_j.R` script
+  `process_variable_j.R` script. The output files from `process_variable_j.R`
+  contain many columns, while `CGR3 field gas exchange gm variable J.xlsx`
+  contains a smaller number of important columns that were actually used to
+  generate figures and tables in the manuscript.
 
 ## Running the scripts
 
