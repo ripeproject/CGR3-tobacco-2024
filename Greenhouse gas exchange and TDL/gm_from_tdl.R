@@ -15,6 +15,9 @@ if (packageVersion('PhotoGEA') != '0.10.0') {
     )
 }
 
+# Clear the workspace
+rm(list=ls())
+
 # Define Rd
 RESPIRATION_RATE <- 2.1
 
